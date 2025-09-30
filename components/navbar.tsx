@@ -36,7 +36,11 @@ export async function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.user_metadata.avatar_url} alt={user.user_metadata.full_name || 'User'} />
+                    <AvatarImage 
+                      src={user.user_metadata.avatar_url} 
+                      alt={user.user_metadata.full_name || 'User'} 
+                      referrerPolicy="no-referrer"
+                    />
                     <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>

@@ -27,7 +27,11 @@ export default async function ProfilePage() {
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center text-center">
           <Avatar className="h-24 w-24">
-            <AvatarImage src={user.user_metadata.avatar_url} alt={user.user_metadata.full_name || 'User'} />
+            <AvatarImage 
+              src={user.user_metadata.avatar_url} 
+              alt={user.user_metadata.full_name || 'User'} 
+              referrerPolicy="no-referrer"
+            />
             <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
           </Avatar>
           <h2 className="mt-4 text-3xl font-bold tracking-tight">
