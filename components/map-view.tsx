@@ -15,14 +15,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom emoji icon
+// Custom emoji icon with circular background
 const createEmojiIcon = (emoji: string) => {
   return L.divIcon({
-    html: `<div style="font-size: 32px; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${emoji}</div>`,
+    html: `<div class="emoji-marker">
+      <div class="emoji-marker-inner">${emoji}</div>
+    </div>`,
     className: 'emoji-icon',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -36],
   });
 };
 
@@ -45,43 +47,87 @@ function MapUpdater({ locations }: { locations: Location[] }) {
   return null;
 }
 
-export function MapView({ locations }: MapViewProps) {
+export function MapView({ locations: initialLocations }: MapViewProps) {
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([
-    'restaurants',
-    'cinemas',
-    'parks',
+    'restaurant',
+    'cafe',
   ]);
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locations, setLocations] = useState<Location[]>(initialLocations);
+  const [loading, setLoading] = useState(false);
+  const [locationCounts, setLocationCounts] = useState<Record<Category, number>>({} as Record<Category, number>);
 
   // Only render map on client side
   useEffect(() => {
     try {
-      console.log('MapView mounting, locations:', locations.length);
+      console.log('MapView mounting');
       setMounted(true);
     } catch (err) {
       console.error('Error mounting map:', err);
       setError(err instanceof Error ? err.message : 'Failed to load map');
     }
-  }, [locations.length]);
+  }, []);
 
-  const filteredLocations = locations.filter((location) =>
-    selectedCategories.includes(location.category)
-  );
+  // Fetch locations when categories change
+  useEffect(() => {
+    if (!mounted || selectedCategories.length === 0) {
+      setLocations([]);
+      setLocationCounts({} as Record<Category, number>);
+      return;
+    }
+
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const { fetchLocations } = await import('@/lib/overpass-api');
+        const newLocations = await fetchLocations(
+          selectedCategories,
+          GURGAON_CENTER[0],
+          GURGAON_CENTER[1],
+          5000 // 5km radius
+        );
+        
+        console.log(`Fetched ${newLocations.length} locations for categories:`, selectedCategories);
+        setLocations(newLocations);
+        
+        // Calculate counts per category
+        const counts: Record<Category, number> = {} as Record<Category, number>;
+        newLocations.forEach((location) => {
+          counts[location.category] = (counts[location.category] || 0) + 1;
+        });
+        setLocationCounts(counts);
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch locations');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [mounted, selectedCategories]);
+
+  const filteredLocations = locations;
 
   if (!mounted) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-gray-100">
-        <p className="text-gray-500">Loading map...</p>
+        <div className="text-center">
+          <div className="animate-pulse text-4xl mb-4">🗺️</div>
+          <p className="text-gray-500">Loading map...</p>
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !loading) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-red-50">
         <div className="text-center p-4">
-          <p className="text-red-600 font-medium mb-2">Error loading map</p>
+          <p className="text-red-600 font-medium mb-2">Error loading data</p>
           <p className="text-sm text-red-500">{error}</p>
         </div>
       </div>
@@ -90,22 +136,31 @@ export function MapView({ locations }: MapViewProps) {
 
   try {
     return (
-      <div className="relative h-full w-full">
+      <div className="relative h-full w-full flex">
         <CategoryFilter
           selectedCategories={selectedCategories}
           onCategoryChange={setSelectedCategories}
+          locationCounts={locationCounts}
+          loading={loading}
         />
-        <MapContainer
+        <div className="flex-1 relative">
+          {loading && (
+            <div className="absolute top-6 right-6 z-[1000] bg-white rounded-lg shadow-lg px-4 py-2 flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span className="text-sm text-gray-600">Loading locations...</span>
+            </div>
+          )}
+          <MapContainer
           center={GURGAON_CENTER}
           zoom={12}
           scrollWheelZoom={true}
           className="h-full w-full z-0"
           style={{ height: '100%', width: '100%' }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+        <TileLayer
+          attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+          url="https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png"
+        />
           <MapUpdater locations={filteredLocations} />
           {filteredLocations.map((location) => (
             <Marker
@@ -125,9 +180,10 @@ export function MapView({ locations }: MapViewProps) {
                   </span>
                 </div>
               </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+          </Marker>
+        ))}
+      </MapContainer>
+        </div>
       </div>
     );
   } catch (err) {
