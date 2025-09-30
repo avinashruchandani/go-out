@@ -67,3 +67,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Leaflet overrides */
+.leaflet-container {
+  font-family: inherit;
+  height: 100% !important;
+  width: 100% !important;
+  z-index: 1;
+}
+
+.leaflet-pane {
+  z-index: 400;
+}
+
+.leaflet-tile-pane {
+  z-index: 200;
+}
+
+.emoji-icon {
+  background: none !important;
+  border: none !important;
+}
+
+/* Ensure map tiles load properly */
+.leaflet-tile-container {
+  pointer-events: auto;
+}
+
+.leaflet-tile {
+  opacity: 1 !important;
+}
