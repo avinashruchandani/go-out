@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User, LogOut } from 'lucide-react'
+import { User, LogOut, Heart } from 'lucide-react'
+import { SignOutButton } from '@/components/sign-out-button'
 
 export async function Navbar() {
   const supabase = await createClient()
@@ -18,17 +19,11 @@ export async function Navbar() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const signOut = async () => {
-    'use server'
-    const supabase = await createClient()
-    await supabase.auth.signOut()
-  }
-
   return (
     <nav className="border-b">
       <div className="flex h-16 items-center px-4 container mx-auto">
         <Link href="/" className="font-bold text-xl">
-          Go Out
+          Go Out Gurgaon! 
         </Link>
         <div className="ml-auto flex items-center space-x-4">
           {user ? (
@@ -63,15 +58,14 @@ export async function Navbar() {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <form action={signOut} className="w-full">
-                    <button type="submit" className="flex w-full items-center cursor-pointer">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Sign out</span>
-                    </button>
-                  </form>
+                  <Link href="/favorites" className="cursor-pointer">
+                    <Heart className="mr-2 h-4 w-4" />
+                    <span>Favorites</span>
+                  </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <SignOutButton />
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (

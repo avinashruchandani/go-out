@@ -121,8 +121,11 @@ export async function fetchCategoryLocations(
           name: tags.name!,
           category,
           coordinates: [lat, lon] as [number, number],
+          lat,
+          lng: lon,
           emoji: getCategoryEmoji(category),
           address,
+          picture_link: undefined, // OSM doesn't provide pictures directly
         };
       });
   } catch (error) {

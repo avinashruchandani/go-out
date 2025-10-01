@@ -34,8 +34,11 @@ export interface Location {
   name: string;
   category: Category;
   coordinates: [number, number]; // [latitude, longitude]
+  lat: number;
+  lng: number;
   emoji: string;
   address: string;
+  picture_link?: string;
 }
 
 export const GURGAON_CENTER: [number, number] = [28.4595, 77.0266];

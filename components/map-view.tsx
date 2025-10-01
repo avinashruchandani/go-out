@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Location, GURGAON_CENTER, Category } from '@/lib/map-data';
 import { CategoryFilter } from '@/components/category-filter';
+import { LocationDetailModal } from '@/components/location-detail-modal';
 
 // Fix for default marker icon in React-Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -57,6 +58,48 @@ export function MapView({ locations: initialLocations }: MapViewProps) {
   const [locations, setLocations] = useState<Location[]>(initialLocations);
   const [loading, setLoading] = useState(false);
   const [locationCounts, setLocationCounts] = useState<Record<Category, number>>({} as Record<Category, number>);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [favoriteLocations, setFavoriteLocations] = useState<Array<{lat: number, lng: number}>>([]);
+  const [user, setUser] = useState<any>(null);
+
+  // Check authentication and fetch favorites
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        // Fetch user's favorite locations with coordinates
+        const { data: favorites } = await supabase
+          .from('user_favourites')
+          .select(`
+            location_id,
+            locations (
+              lat,
+              lng
+            )
+          `)
+          .eq('user_id', user.id);
+
+        if (favorites) {
+          const favLocations = favorites
+            .filter((f: any) => f.locations)
+            .map((f: any) => ({
+              lat: f.locations.lat,
+              lng: f.locations.lng
+            }));
+          setFavoriteLocations(favLocations);
+          console.log('Loaded favorite locations:', favLocations);
+        }
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   // Only render map on client side
   useEffect(() => {
@@ -110,7 +153,63 @@ export function MapView({ locations: initialLocations }: MapViewProps) {
     fetchData();
   }, [mounted, selectedCategories]);
 
-  const filteredLocations = locations;
+  // Helper function to check if location is in favorites (by coordinates)
+  const isLocationFavorited = (location: Location) => {
+    return favoriteLocations.some((fav) => {
+      // Match by coordinates with small tolerance (about 11 meters)
+      const latMatch = Math.abs(fav.lat - location.lat) < 0.0001;
+      const lngMatch = Math.abs(fav.lng - location.lng) < 0.0001;
+      return latMatch && lngMatch;
+    });
+  };
+
+  // Filter locations based on favorites toggle
+  const filteredLocations = showOnlyFavorites
+    ? locations.filter((loc) => isLocationFavorited(loc))
+    : locations;
+
+  const handleMarkerClick = (location: Location) => {
+    setSelectedLocation(location);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedLocation(null);
+  };
+
+  const handleShowOnlyFavoritesChange = (value: boolean) => {
+    setShowOnlyFavorites(value);
+  };
+
+  const handleFavoriteChange = async () => {
+    // Refresh favorites list when a favorite is added/removed
+    if (user) {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: favorites } = await supabase
+        .from('user_favourites')
+        .select(`
+          location_id,
+          locations (
+            lat,
+            lng
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (favorites) {
+        const favLocations = favorites
+          .filter((f: any) => f.locations)
+          .map((f: any) => ({
+            lat: f.locations.lat,
+            lng: f.locations.lng
+          }));
+        setFavoriteLocations(favLocations);
+        console.log('Refreshed favorite locations:', favLocations);
+      }
+    }
+  };
 
   if (!mounted) {
     return (
@@ -136,55 +235,56 @@ export function MapView({ locations: initialLocations }: MapViewProps) {
 
   try {
     return (
-      <div className="relative h-full w-full flex">
-        <CategoryFilter
-          selectedCategories={selectedCategories}
-          onCategoryChange={setSelectedCategories}
-          locationCounts={locationCounts}
-          loading={loading}
-        />
-        <div className="flex-1 relative">
-          {loading && (
-            <div className="absolute top-6 right-6 z-[1000] bg-white rounded-lg shadow-lg px-4 py-2 flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <span className="text-sm text-gray-600">Loading locations...</span>
-            </div>
-          )}
-          <MapContainer
-          center={GURGAON_CENTER}
-          zoom={12}
-          scrollWheelZoom={true}
-          className="h-full w-full z-0"
-          style={{ height: '100%', width: '100%' }}
-        >
-        <TileLayer
-          attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
-          url="https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png"
-        />
-          <MapUpdater locations={filteredLocations} />
-          {filteredLocations.map((location) => (
-            <Marker
-              key={location.id}
-              position={location.coordinates}
-              icon={createEmojiIcon(location.emoji)}
+      <>
+        <div className="relative h-full w-full flex">
+          <CategoryFilter
+            selectedCategories={selectedCategories}
+            onCategoryChange={setSelectedCategories}
+            locationCounts={locationCounts}
+            loading={loading}
+            showOnlyFavorites={showOnlyFavorites}
+            onShowOnlyFavoritesChange={handleShowOnlyFavoritesChange}
+            isAuthenticated={!!user}
+          />
+          <div className="flex-1 relative">
+            {loading && (
+              <div className="absolute top-6 right-6 z-[1000] bg-white rounded-lg shadow-lg px-4 py-2 flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span className="text-sm text-gray-600">Loading locations...</span>
+              </div>
+            )}
+            <MapContainer
+              center={GURGAON_CENTER}
+              zoom={12}
+              scrollWheelZoom={true}
+              className="h-full w-full z-0"
+              style={{ height: '100%', width: '100%' }}
             >
-              <Popup>
-                <div className="p-2">
-                  <h3 className="font-bold text-lg mb-1 flex items-center gap-2">
-                    <span>{location.emoji}</span>
-                    {location.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-2">{location.address}</p>
-                  <span className="inline-block px-2 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">
-                    {location.category}
-                  </span>
-                </div>
-              </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+              <TileLayer
+                attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+                url="https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png"
+              />
+              <MapUpdater locations={filteredLocations} />
+              {filteredLocations.map((location) => (
+                <Marker
+                  key={location.id}
+                  position={location.coordinates}
+                  icon={createEmojiIcon(location.emoji)}
+                  eventHandlers={{
+                    click: () => handleMarkerClick(location),
+                  }}
+                />
+              ))}
+            </MapContainer>
+          </div>
         </div>
-      </div>
+        <LocationDetailModal
+          location={selectedLocation}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onFavoriteChange={handleFavoriteChange}
+        />
+      </>
     );
   } catch (err) {
     console.error('Error rendering map:', err);

@@ -3,19 +3,26 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Category, CATEGORY_INFO } from '@/lib/map-data';
+import { Heart } from 'lucide-react';
 
 interface CategoryFilterProps {
   selectedCategories: Category[];
   onCategoryChange: (categories: Category[]) => void;
   locationCounts: Record<Category, number>;
   loading: boolean;
+  showOnlyFavorites: boolean;
+  onShowOnlyFavoritesChange: (value: boolean) => void;
+  isAuthenticated: boolean;
 }
 
 export function CategoryFilter({ 
   selectedCategories, 
   onCategoryChange, 
   locationCounts,
-  loading 
+  loading,
+  showOnlyFavorites,
+  onShowOnlyFavoritesChange,
+  isAuthenticated
 }: CategoryFilterProps) {
   const toggleCategory = (category: Category) => {
     if (selectedCategories.includes(category)) {
@@ -55,12 +62,41 @@ export function CategoryFilter({
         <p className="text-sm text-gray-600">
           {selectedCategories.length} selected · {totalLocations} locations
         </p>
+        
+        {/* Favorites Toggle */}
+        {isAuthenticated && (
+          <div className="mt-3 mb-2">
+            <div
+              className={`flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
+                showOnlyFavorites ? 'bg-pink-50 border border-pink-200' : 'bg-white border border-gray-200 hover:bg-gray-50'
+              }`}
+              onClick={() => onShowOnlyFavoritesChange(!showOnlyFavorites)}
+            >
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="favorites-toggle"
+                  checked={showOnlyFavorites}
+                  onCheckedChange={(checked) => onShowOnlyFavoritesChange(checked as boolean)}
+                />
+                <label
+                  htmlFor="favorites-toggle"
+                  className="text-sm font-medium cursor-pointer flex items-center space-x-1"
+                >
+                  <Heart className={`h-4 w-4 ${showOnlyFavorites ? 'fill-pink-500 text-pink-500' : ''}`} />
+                  <span>Show Only Favorites</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="flex gap-2 mt-3">
           <Button
             variant="outline"
             size="sm"
             className="flex-1 text-xs"
             onClick={selectAll}
+            disabled={showOnlyFavorites}
           >
             Select All
           </Button>
@@ -69,6 +105,7 @@ export function CategoryFilter({
             size="sm"
             className="flex-1 text-xs"
             onClick={clearAll}
+            disabled={showOnlyFavorites}
           >
             Clear All
           </Button>
