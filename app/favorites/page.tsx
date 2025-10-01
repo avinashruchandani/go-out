@@ -21,20 +21,20 @@ export default async function FavoritesPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Error Loading Favorites</h1>
-          <p className="text-gray-600">{error.message}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-red-600 mb-2">Error Loading Favorites</h1>
+          <p className="text-gray-600 text-sm sm:text-base">{error.message}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">My Favorites</h1>
-        <p className="text-gray-600">
+    <div className="container mx-auto p-4 sm:p-6 md:p-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2">My Favorites</h1>
+        <p className="text-gray-600 text-sm sm:text-base">
           {favorites?.length || 0} saved location{favorites?.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -42,8 +42,8 @@ export default async function FavoritesPage() {
       {!favorites || favorites.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">❤️</div>
-          <h2 className="text-2xl font-semibold mb-2">No favorites yet</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-xl sm:text-2xl font-semibold mb-2">No favorites yet</h2>
+          <p className="text-gray-600 mb-6 text-sm sm:text-base px-4">
             Start exploring the map and add locations to your favorites!
           </p>
           <Button asChild>
@@ -51,7 +51,7 @@ export default async function FavoritesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {favorites.map((favorite: any) => {
             const location = favorite.locations;
             if (!location) return null;
@@ -66,14 +66,14 @@ export default async function FavoritesPage() {
             return (
               <Card key={favorite.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-3xl">{categoryInfo?.emoji || '📍'}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-2xl sm:text-3xl flex-shrink-0">{categoryInfo?.emoji || '📍'}</span>
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{location.name}</CardTitle>
+                        <CardTitle className="text-base sm:text-lg truncate">{location.name}</CardTitle>
                         <CardDescription className="flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{location.address}</span>
+                          <span className="truncate text-xs sm:text-sm">{location.address}</span>
                         </CardDescription>
                       </div>
                     </div>
@@ -84,7 +84,7 @@ export default async function FavoritesPage() {
                   <div className="space-y-3">
                     {/* Category Badge */}
                     <div>
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      <span className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                         {categoryInfo?.emoji} {categoryInfo?.label}
                       </span>
                     </div>
@@ -92,7 +92,7 @@ export default async function FavoritesPage() {
                     {/* Notes */}
                     {favorite.notes && (
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-sm text-gray-700 italic">"{favorite.notes}"</p>
+                        <p className="text-xs sm:text-sm text-gray-700 italic break-words">"{favorite.notes}"</p>
                       </div>
                     )}
 
